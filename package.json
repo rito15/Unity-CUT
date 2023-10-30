@@ -1,0 +1,16 @@
+{
+	"name" : "com.rito.cut",
+	"version": "1.0.0",
+	"displayName" :"Rito CUT 2023",
+	"description" :"Unity Custom Utilities",
+	"unity": "2021.3",
+	"dependencies": {},
+	"keywords": ["rito","unity","utility"],
+	"author":
+	{
+		"name":"Rito",
+		"email":"atsrito@gmail.com",
+		"url":"https://github.com/rito15"
+	},
+	"category": "Unity"
+}
