@@ -63,7 +63,7 @@ namespace Rito.CUT
 
         [SerializeField, Range(0.1f, 1.0f)]
         [Tooltip("게임 시작 시 설정할 비율")]
-        private float _targetRatio = 1.0f;
+        private float _InitialRatio = 1.0f;
 
         [SerializeField]
         [Tooltip("UI만 제외하고 렌더링할 카메라")]
@@ -92,9 +92,9 @@ namespace Rito.CUT
         [Tooltip("디버그 로그 출력 허용")]
         private bool _allowDebug = true;
 
-        [SerializeField]
+        [SerializeField, HideInInspector]
         [Tooltip("하이어라키에서 숨기기")]
-        private bool _hideFromHiearchy = false;
+        private bool _hideInHierarchy = false;
 
         // Fields
         private int _currentWidth;
@@ -107,6 +107,9 @@ namespace Rito.CUT
         [SerializeField, HideInInspector]
         private Shader _rawImageShader;
 
+        // Static View
+        public static float CurrentRatio { get; private set; }
+
         private void Log(string msg)
         {
             if (!_allowDebug) return;
@@ -116,13 +119,20 @@ namespace Rito.CUT
         private void Reset()
         {
             _rawImageShader = Shader.Find("Unlit/Texture");
+            UpscaleSampler[] uss = FindObjectsOfType<UpscaleSampler>();
+            if (uss.Length > 1)
+            {
+                UnityEngine.Debug.LogWarning("Upscale Sampler 컴포넌트가 씬에 두 개 이상 존재합니다.", this);
+            }
         }
 
         private void Start()
         {
+            _currentRatio = CurrentRatio = 1f;
+
             if (_runOnStart)
             {
-                Run(_targetRatio);
+                Run(_InitialRatio);
             }
         }
         private void OnEnable()
@@ -183,6 +193,7 @@ namespace Rito.CUT
             _currentWidth  = w;
             _currentHeight = h;
             _currentRatio  = ratio;
+            CurrentRatio   = ratio;
             Log($"Screen: {sourceW}x{sourceH} / Sampled: {w}x{h} ({ratio * 100:F2}%)");
 
             _initialized = true;
@@ -281,7 +292,7 @@ namespace Rito.CUT
 
         private void HideFromHierarchy()
         {
-            if (_hideFromHiearchy == false) return;
+            if (_hideInHierarchy == false || gameObject.hideFlags == HideFlags.HideInHierarchy) return;
             gameObject.hideFlags = 
             _targetCanvas.gameObject.hideFlags = 
             _uiCamera.gameObject.hideFlags = HideFlags.HideInHierarchy;
@@ -290,8 +301,9 @@ namespace Rito.CUT
 
 #endregion
 
-#region Editor Only
+        #region Editor Only
 #if UNITY_EDITOR
+        private float _editorRatio = 1f;
         private static System.Reflection.MethodInfo GetSizeOfMainGameViewMi;
 
         // 커스텀 에디터에서 Screen.width, height를 참조하면 게임 뷰의 해상도를 가져오지 못하므로 에디터 스크립트 활용
@@ -314,9 +326,9 @@ namespace Rito.CUT
         }
 #endif
 
-#endregion
+        #endregion
 
-#region Custom Editor
+        #region Custom Editor
 #if UNITY_EDITOR
         [UnityEditor.CustomEditor(typeof(UpscaleSampler))]
         private class CE : UnityEditor.Editor
@@ -331,6 +343,16 @@ namespace Rito.CUT
             public override void OnInspectorGUI()
             {
                 base.OnInspectorGUI();
+                if (!UnityEditor.EditorApplication.isPlaying)
+                {
+                    UnityEditor.EditorGUI.BeginChangeCheck();
+                    t._hideInHierarchy = UnityEditor.EditorGUILayout.Toggle("Hide in Hierarchy", t._hideInHierarchy);
+                    if (UnityEditor.EditorGUI.EndChangeCheck())
+                    {
+                        UnityEditor.EditorUtility.SetDirty(t);
+                    }
+                }
+
                 using (new UnityEditor.EditorGUI.DisabledGroupScope(true))
                 {
                     t._rawImageShader = (Shader)UnityEditor.EditorGUILayout.ObjectField("Raw Image Shader", t._rawImageShader, typeof(Shader), allowSceneObjects: false);
@@ -338,14 +360,20 @@ namespace Rito.CUT
                     {
                         t._rawImageShader = Shader.Find("Unlit/Texture");
                     }
+                    UnityEditor.EditorGUILayout.FloatField("Current Ratio", t._currentRatio);
                 }
                 UnityEditor.EditorGUILayout.Space(8f);
 
                 if (Application.isPlaying == false) return;
-                if (GUILayout.Button("Apply Now"))
+
+                t._editorRatio = Mathf.Max(0.1f, Mathf.Round(t._editorRatio * 100f) * 0.01f);
+                t._editorRatio = UnityEditor.EditorGUILayout.Slider("New Ratio", t._editorRatio, 0.1f, 1f);
+                if (GUILayout.Button("Change Ratio"))
                 {
-                    t.Run(t._targetRatio);
+                    t.Run(t._editorRatio);
                 }
+                UnityEditor.EditorGUILayout.Space(8f);
+
                 using (new UnityEditor.EditorGUILayout.HorizontalScope())
                 {
                     DrawApplyButton(0.25f);
@@ -385,6 +413,6 @@ namespace Rito.CUT
             }
         }
 #endif
-#endregion
+        #endregion
     }
 }
