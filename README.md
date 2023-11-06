@@ -35,7 +35,8 @@ https://github.com/rito15/Unity-CUT.git
         /// NOTE: The first result (0) will be the top UI element that was first hit.</summary>
         public static List<RaycastResult> RaycastGui(Vector2 screenPosition, LayerMask layerMask)
         {
-            screenPosition /= Rito.CUT.UpscaleSampler.CurrentRatio; // ** 추가 **
+            if (Rito.CUT.UpscaleSampler.IsCreated())                    // ** 추가 **
+                screenPosition /= Rito.CUT.UpscaleSampler.CurrentRatio; // ** 추가 **
             tempRaycastResults.Clear();
 
             var currentEventSystem = GetEventSystem();
@@ -66,17 +67,19 @@ https://github.com/rito15/Unity-CUT.git
                 touch.phase == UnityEngine.TouchPhase.Stationary ||
                 touch.phase == UnityEngine.TouchPhase.Moved;
 #endif
-            position *= Rito.CUT.UpscaleSampler.CurrentRatio; // ** 추가 **
+            if (Rito.CUT.UpscaleSampler.IsCreated())              // ** 추가 **
+                position *= Rito.CUT.UpscaleSampler.CurrentRatio; // ** 추가 **
         }
 
         public static UnityEngine.Vector2 GetMousePosition()
         {
+            float upsample = Rito.CUT.UpscaleSampler.IsCreated() ? Rito.CUT.UpscaleSampler.CurrentRatio : 1f; // ** 추가 **
 #if USE_NEW_INPUT_SYSTEM
             return 
-                Rito.CUT.UpscaleSampler.CurrentRatio *  // ** 추가 **
+                upsample * // ** 추가 **
                 (UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.position.ReadValue() : default(UnityEngine.Vector2));
 #else
-            return Rito.CUT.UpscaleSampler.CurrentRatio * UnityEngine.Input.mousePosition; // ** 변경 **
+            return upsample * UnityEngine.Input.mousePosition; // ** 변경 **
 #endif
         }
 ```
