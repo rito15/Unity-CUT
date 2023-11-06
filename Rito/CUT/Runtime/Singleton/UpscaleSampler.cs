@@ -30,6 +30,8 @@ namespace Rito.CUT
                 instance = container.AddComponent<UpscaleSampler>();
             }
         }
+        
+        public static bool IsCreated() => instance != null;
 
         /// <summary> 
         /// [Awake()에서 호출]
